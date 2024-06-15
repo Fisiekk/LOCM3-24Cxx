@@ -88,12 +88,12 @@ int main(void)
   i2c_transfer7(I2C2, 0x50, command_buffer, 2, buffer, 32);
   
   
-  for(uint32_t i = 0; i <= 10000000; i++)
+  for(uint32_t i = 0; i <= 1000000; i++)
     __asm__("NOP");
   
 
   
-  for(uint16_t i = 0; i <= 31; i++)
+  for(uint16_t i = 0; i <= 31; i++);
     {
       usart_send_blocking(USART1, buffer[i]);
     }
