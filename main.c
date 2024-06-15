@@ -24,13 +24,12 @@ void clock_setup(void)
   
   rcc_periph_clock_enable(RCC_I2C2);
   rcc_periph_clock_enable(RCC_USART1);
-
 }
 
 void gpio_setup(void)
 {
   gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO4);
-
+  
   /*
    * I2C2
    * PA11 = SCL; PA12 = SDA
@@ -46,24 +45,76 @@ void gpio_setup(void)
   i2c_peripheral_enable(I2C2);
 }
 
+void uart_setup(void)
+{
+  /*
+   * USART1
+   * PB6 = TX; PB7 = RX
+   */
+
+  gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+  gpio_set_af(GPIOB, GPIO_AF0, GPIO6 | GPIO7);
+  
+  usart_set_baudrate(USART1, 115200);
+  usart_set_databits(USART1, 8);
+  usart_set_stopbits(USART1, USART_STOPBITS_1);
+  usart_set_mode(USART1, USART_MODE_TX);
+  usart_set_parity(USART1, USART_PARITY_NONE);
+  usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+
+  usart_enable(USART1);
+}
+
 int main(void)
 {
   clock_setup();
   gpio_setup();
-  
-  uint8_t buffer[32] = {0};
-  uint8_t command_buffer[2] = {0};
 
+  gpio_clear(GPIOA, GPIO4);
+  
+  uart_setup();
+
+  uint8_t buffer[32] = {0};
+  uint8_t command_buffer[12] = {0};
+
+  
   for(uint32_t i = 0; i <= 10000000; i++)
     __asm__("NOP");
 
+  command_buffer[0] = 0x00;
+  command_buffer[1] = 0x00;
+  command_buffer[2] = 0x43;
+
+  i2c_transfer7(I2C2, 0x50, command_buffer, 2, buffer, 32);
+  
+  
+  for(uint32_t i = 0; i <= 10000000; i++)
+    __asm__("NOP");
+  
+
+  
+  for(uint16_t i = 0; i <= 31; i++)
+    {
+      usart_send_blocking(USART1, buffer[i]);
+    }
+  
+  
+  usart_send_blocking(USART1, 0x00);
+ 
+  gpio_set(GPIOA, GPIO4);
+  
+  return 0;
+}
+
+/*
+  //i2c addres scanner
   for(uint16_t addr = 0; addr <= 127; addr++)
     {
-      i2c_set_7bit_address(I2C2, addr);
+      i2c_set_7bit_address(I2C2, 0x50);
       i2c_set_read_transfer_dir(I2C2);
       i2c_set_bytes_to_transfer(I2C2, 0);
       i2c_send_start(I2C2);
-      //i2c_enable_autoend(I2C2);
+      i2c_enable_autoend(I2C2);
 
       while (i2c_received_data(I2C2) == 0)
 	{
@@ -83,10 +134,4 @@ int main(void)
       for(uint32_t i = 0; i <= 64000; i++)
 	__asm__("NOP");
 	}
-  
-  i2c_transfer7(I2C2, 0x50, 0, 0, buffer, 32);
-  
-  gpio_clear(GPIOA, GPIO4);
-  
-  return 0;
-}
+  */
